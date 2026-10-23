@@ -1,28 +1,39 @@
 // ==========================================
-// PROGETTO: RUBRICA TELEFONICA IN C++ (Con Ordine Alfabetico)
+// PROGETTO: RUBRICA TELEFONICA AVANZATA IN C++
 // ==========================================
 
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <vector>     // Necessario per usare i vettori (liste dinamiche)
-#include <algorithm>  // Necessario per usare la funzione sort()
-#include <cstdio>     // Per remove() e rename()
+#include <vector>
+#include <algorithm>
+#include <cctype>   // Per tolower()
+#include <cstdio>   // Per remove() e rename()
 
 using namespace std;
 
-// Definiamo una STRUTTURA (struct) per raggruppare nome e telefono di un contatto
+// Struttura con nome, telefono, email e indirizzo
 struct Contatto {
     string nome;
     string telefono;
+    string email;
+    string indirizzo;
 };
 
-// Funzione di supporto per ordinare alfabeticamente i contatti in base al nome
-bool confrontaContatti(const Contatto& a, const Contatto& b) {
-    return a.nome < b.nome; // Restituisce vero se il nome 'a' viene prima di 'b' nell'alfabeto
+// Funzione per convertire una stringa in minuscolo (per la ricerca intelligente)
+string toLowerString(string s) {
+    for (char &c : s) {
+        c = tolower(c);
+    }
+    return s;
 }
 
-// Funzione di supporto per caricare tutti i contatti dal file a un vettore in memoria
+// Funzione di ordinamento alfabetico basata sul nome
+bool confrontaContatti(const Contatto& a, const Contatto& b) {
+    return a.nome < b.nome;
+}
+
+// Carica i contatti dal file gestendo i 4 campi separati da virgola
 vector<Contatto> caricaContattiDaFile() {
     vector<Contatto> lista;
     ifstream file("rubrica.txt");
@@ -30,12 +41,25 @@ vector<Contatto> caricaContattiDaFile() {
 
     if (file.is_open()) {
         while (getline(file, riga)) {
-            size_t virgola = riga.find(',');
-            if (virgola != string::npos) {
+            size_t v1 = riga.find(',');
+            if (v1 != string::npos) {
+                size_t v2 = riga.find(',', v1 + 1);
+                size_t v3 = riga.find(',', v2 + 1);
+
                 Contatto c;
-                c.nome = riga.substr(0, virgola);
-                c.telefono = riga.substr(virgola + 1);
-                lista.push_back(c); // Aggiunge il contatto alla lista
+                if (v2 != string::npos && v3 != string::npos) {
+                    c.nome = riga.substr(0, v1);
+                    c.telefono = riga.substr(v1 + 1, v2 - v1 - 1);
+                    c.email = riga.substr(v2 + 1, v3 - v2 - 1);
+                    c.indirizzo = riga.substr(v3 + 1);
+                } else {
+                    // Compatibilità con vecchi contatti
+                    c.nome = riga.substr(0, v1);
+                    c.telefono = riga.substr(v1 + 1);
+                    c.email = "-";
+                    c.indirizzo = "-";
+                }
+                lista.push_back(c);
             }
         }
         file.close();
@@ -43,41 +67,61 @@ vector<Contatto> caricaContattiDaFile() {
     return lista;
 }
 
-// Funzione di supporto per salvare e ordinare la lista sul file
+// Salva e ordina la lista sul file
 void salvaContattiSuFile(vector<Contatto>& lista) {
-    // Prima di salvare, ordiniamo la lista alfabeticamente!
     sort(lista.begin(), lista.end(), confrontaContatti);
 
-    ofstream file("rubrica.txt"); // Apre in scrittura (sovrascrive ordinato)
+    ofstream file("rubrica.txt");
     if (file.is_open()) {
         for (const auto& c : lista) {
-            file << c.nome << "," << c.telefono << endl;
+            file << c.nome << "," << c.telefono << "," << c.email << "," << c.indirizzo << endl;
         }
         file.close();
     }
 }
 
 // ==========================================
-// 1. AGGIUNGI CONTATTO (Già ordinato)
+// 1. AGGIUNGI CONTATTO (Con s/n separati per Email e Indirizzo)
 // ==========================================
 void aggiungiContatto() {
     Contatto nuovo;
+    char sceltaEmail, sceltaIndirizzo;
+    
     cout << "\n--- AGGIUNGI NUMERO ---" << endl;
     cout << "Inserisci il nome: ";
     cin >> nuovo.nome;
     cout << "Inserisci il numero: ";
     cin >> nuovo.telefono;
 
-    // Carichiamo la lista attuale, aggiungiamo il nuovo, ordiniamo e salviamo
+    // Chiede se inserire l'email con s/n
+    cout << "Vuoi inserire l'email? (s/n): ";
+    cin >> sceltaEmail;
+    if (sceltaEmail == 's' || sceltaEmail == 'S') {
+        cout << "Inserisci l'email: ";
+        cin >> nuovo.email;
+    } else {
+        nuovo.email = "-";
+    }
+
+    // Chiede se inserire l'indirizzo con s/n
+    cout << "Vuoi inserire l'indirizzo? (s/n): ";
+    cin >> sceltaIndirizzo;
+    if (sceltaIndirizzo == 's' || sceltaIndirizzo == 'S') {
+        cout << "Inserisci l'indirizzo: ";
+        cin >> nuovo.indirizzo;
+    } else {
+        nuovo.indirizzo = "-";
+    }
+
     vector<Contatto> lista = caricaContattiDaFile();
     lista.push_back(nuovo);
     salvaContattiSuFile(lista);
 
-    cout << "-> Numero salvato e rubrica ordinata con successo!" << endl;
+    cout << "-> Contatto salvato e rubrica ordinata con successo!" << endl;
 }
 
 // ==========================================
-// 2. CERCA CONTATTO
+// 2. CERCA CONTATTO (Case-Insensitive)
 // ==========================================
 void cercaContatto() {
     string cercaNome;
@@ -85,12 +129,17 @@ void cercaContatto() {
     cout << "Inserisci il nome da cercare: ";
     cin >> cercaNome;
 
+    string cercaLower = toLowerString(cercaNome);
     vector<Contatto> lista = caricaContattiDaFile();
     bool trovato = false;
 
     for (const auto& c : lista) {
-        if (c.nome == cercaNome) {
-            cout << "Trovato! -> Nome: " << c.nome << " | Tel: " << c.telefono << endl;
+        if (toLowerString(c.nome) == cercaLower) {
+            cout << "\n[TROVATO]" << endl;
+            cout << "Nome: " << c.nome << endl;
+            cout << "Tel: " << c.telefono << endl;
+            cout << "Email: " << c.email << endl;
+            cout << "Indirizzo: " << c.indirizzo << endl;
             trovato = true;
         }
     }
@@ -101,7 +150,7 @@ void cercaContatto() {
 }
 
 // ==========================================
-// 3. VISUALIZZA TUTTI (In ordine alfabetico)
+// 3. VISUALIZZA TUTTI (Solo su richiesta)
 // ==========================================
 void visualizzaTutti() {
     cout << "\n--- LISTA CONTATTI (ORDINATA) ---" << endl;
@@ -113,7 +162,10 @@ void visualizzaTutti() {
     }
 
     for (size_t i = 0; i < lista.size(); i++) {
-        cout << i + 1 << ". " << lista[i].nome << " -> " << lista[i].telefono << endl;
+        cout << i + 1 << ". " << lista[i].nome 
+             << " | Tel: " << lista[i].telefono 
+             << " | Email: " << lista[i].email 
+             << " | Indirizzo: " << lista[i].indirizzo << endl;
     }
 }
 
@@ -128,18 +180,19 @@ void modificaContatto() {
     cout << "Inserisci il nuovo numero di telefono: ";
     cin >> nuovoTelefono;
 
+    string cercaLower = toLowerString(cercaNome);
     vector<Contatto> lista = caricaContattiDaFile();
     bool trovato = false;
 
     for (auto& c : lista) {
-        if (c.nome == cercaNome) {
+        if (toLowerString(c.nome) == cercaLower) {
             c.telefono = nuovoTelefono;
             trovato = true;
         }
     }
 
     if (trovato) {
-        salvaContattiSuFile(lista); // Salva e riordina
+        salvaContattiSuFile(lista);
         cout << "-> Contatto modificato con successo!" << endl;
     } else {
         cout << "-> Nessun contatto trovato con questo nome." << endl;
@@ -155,20 +208,21 @@ void eliminaContatto() {
     cout << "Inserisci il nome del contatto da eliminare: ";
     cin >> cercaNome;
 
+    string cercaLower = toLowerString(cercaNome);
     vector<Contatto> lista = caricaContattiDaFile();
-    vector<Contatto> nuovaLista; // Lista di appoggio senza quello eliminato
+    vector<Contatto> nuovaLista;
     bool trovato = false;
 
     for (const auto& c : lista) {
-        if (c.nome == cercaNome) {
-            trovato = true; // Lo saltiamo (quindi viene eliminato)
+        if (toLowerString(c.nome) == cercaLower) {
+            trovato = true;
         } else {
             nuovaLista.push_back(c);
         }
     }
 
     if (trovato) {
-        salvaContattiSuFile(nuovaLista); // Salva la lista ripulita (rimane ordinata)
+        salvaContattiSuFile(nuovaLista);
         cout << "-> Contatto eliminato con successo!" << endl;
     } else {
         cout << "-> Nessun contatto trovato con questo nome." << endl;
@@ -176,7 +230,7 @@ void eliminaContatto() {
 }
 
 // ==========================================
-// FUNZIONE PRINCIPALE (MENU)
+// FUNZIONE PRINCIPALE (MENU PROTETTO)
 // ==========================================
 int main() {
     int scelta;
@@ -193,7 +247,14 @@ int main() {
         cout << "6. Esci" << endl;
         cout << "Scegli un'opzione: ";
         
-        cin >> scelta;
+        // Protezione anti-crash se inserisci lettere nel menu
+        if (!(cin >> scelta)) {
+            cout << "\n[ERRORE] Inserisci un numero valido da 1 a 6, non lettere!" << endl;
+            cin.clear();
+            cin.ignore(10000, '\n');
+            scelta = 0;
+            continue;
+        }
 
         switch (scelta) {
             case 1:
@@ -212,10 +273,10 @@ int main() {
                 eliminaContatto();
                 break;
             case 6:
-                cout << "Uscita dal programma. Ciao!" << endl;
+                cout << "Uscita dal programma. A presto!" << endl;
                 break;
             default:
-                cout << "Scelta non valida! Inserisci un numero da 1 a 6." << endl;
+                cout << "Scelta non valida! Inserisci un numero tra 1 e 6." << endl;
         }
         
     } while (scelta != 6);
