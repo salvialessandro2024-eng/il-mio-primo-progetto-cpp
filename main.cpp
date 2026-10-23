@@ -1,5 +1,5 @@
 // ==========================================
-// PROGETTO: RUBRICA TELEFONICA AVANZATA IN C++
+// PROGETTO: RUBRICA MULTI-FILE CON SCELTE DEDICATE
 // ==========================================
 
 #include <iostream>
@@ -33,10 +33,10 @@ bool confrontaContatti(const Contatto& a, const Contatto& b) {
     return a.nome < b.nome;
 }
 
-// Carica i contatti dal file gestendo i 4 campi separati da virgola
-vector<Contatto> caricaContattiDaFile() {
+// Carica i contatti dal file specificato
+vector<Contatto> caricaContattiDaFile(const string& nomeFile) {
     vector<Contatto> lista;
-    ifstream file("rubrica.txt");
+    ifstream file(nomeFile);
     string riga;
 
     if (file.is_open()) {
@@ -53,7 +53,6 @@ vector<Contatto> caricaContattiDaFile() {
                     c.email = riga.substr(v2 + 1, v3 - v2 - 1);
                     c.indirizzo = riga.substr(v3 + 1);
                 } else {
-                    // Compatibilità con vecchi contatti
                     c.nome = riga.substr(0, v1);
                     c.telefono = riga.substr(v1 + 1);
                     c.email = "-";
@@ -67,11 +66,11 @@ vector<Contatto> caricaContattiDaFile() {
     return lista;
 }
 
-// Salva e ordina la lista sul file
-void salvaContattiSuFile(vector<Contatto>& lista) {
+// Salva e ordina la lista sul file specificato
+void salvaContattiSuFile(vector<Contatto>& lista, const string& nomeFile) {
     sort(lista.begin(), lista.end(), confrontaContatti);
 
-    ofstream file("rubrica.txt");
+    ofstream file(nomeFile);
     if (file.is_open()) {
         for (const auto& c : lista) {
             file << c.nome << "," << c.telefono << "," << c.email << "," << c.indirizzo << endl;
@@ -81,19 +80,18 @@ void salvaContattiSuFile(vector<Contatto>& lista) {
 }
 
 // ==========================================
-// 1. AGGIUNGI CONTATTO (Con s/n separati per Email e Indirizzo)
+// 1. AGGIUNGI CONTATTO
 // ==========================================
-void aggiungiContatto() {
+void aggiungiContatto(const string& nomeFile) {
     Contatto nuovo;
     char sceltaEmail, sceltaIndirizzo;
     
-    cout << "\n--- AGGIUNGI NUMERO ---" << endl;
+    cout << "\n--- AGGIUNGI NUMERO (" << nomeFile << ") ---" << endl;
     cout << "Inserisci il nome: ";
     cin >> nuovo.nome;
     cout << "Inserisci il numero: ";
     cin >> nuovo.telefono;
 
-    // Chiede se inserire l'email con s/n
     cout << "Vuoi inserire l'email? (s/n): ";
     cin >> sceltaEmail;
     if (sceltaEmail == 's' || sceltaEmail == 'S') {
@@ -103,7 +101,6 @@ void aggiungiContatto() {
         nuovo.email = "-";
     }
 
-    // Chiede se inserire l'indirizzo con s/n
     cout << "Vuoi inserire l'indirizzo? (s/n): ";
     cin >> sceltaIndirizzo;
     if (sceltaIndirizzo == 's' || sceltaIndirizzo == 'S') {
@@ -113,24 +110,24 @@ void aggiungiContatto() {
         nuovo.indirizzo = "-";
     }
 
-    vector<Contatto> lista = caricaContattiDaFile();
+    vector<Contatto> lista = caricaContattiDaFile(nomeFile);
     lista.push_back(nuovo);
-    salvaContattiSuFile(lista);
+    salvaContattiSuFile(lista, nomeFile);
 
     cout << "-> Contatto salvato e rubrica ordinata con successo!" << endl;
 }
 
 // ==========================================
-// 2. CERCA CONTATTO (Case-Insensitive)
+// 2. CERCA CONTATTO
 // ==========================================
-void cercaContatto() {
+void cercaContatto(const string& nomeFile) {
     string cercaNome;
-    cout << "\n--- CERCA NUMERO ---" << endl;
+    cout << "\n--- CERCA NUMERO (" << nomeFile << ") ---" << endl;
     cout << "Inserisci il nome da cercare: ";
     cin >> cercaNome;
 
     string cercaLower = toLowerString(cercaNome);
-    vector<Contatto> lista = caricaContattiDaFile();
+    vector<Contatto> lista = caricaContattiDaFile(nomeFile);
     bool trovato = false;
 
     for (const auto& c : lista) {
@@ -150,14 +147,14 @@ void cercaContatto() {
 }
 
 // ==========================================
-// 3. VISUALIZZA TUTTI (Solo su richiesta)
+// 3. VISUALIZZA TUTTI
 // ==========================================
-void visualizzaTutti() {
-    cout << "\n--- LISTA CONTATTI (ORDINATA) ---" << endl;
-    vector<Contatto> lista = caricaContattiDaFile();
+void visualizzaTutti(const string& nomeFile) {
+    cout << "\n--- LISTA CONTATTI (" << nomeFile << ") ---" << endl;
+    vector<Contatto> lista = caricaContattiDaFile(nomeFile);
 
     if (lista.empty()) {
-        cout << "La rubrica e' vuota!" << endl;
+        cout << "La rubrica e' vuota o il file non esiste ancora!" << endl;
         return;
     }
 
@@ -172,16 +169,16 @@ void visualizzaTutti() {
 // ==========================================
 // 4. MODIFICA CONTATTO
 // ==========================================
-void modificaContatto() {
+void modificaContatto(const string& nomeFile) {
     string cercaNome, nuovoTelefono;
-    cout << "\n--- MODIFICA CONTATTO ---" << endl;
+    cout << "\n--- MODIFICA CONTATTO (" << nomeFile << ") ---" << endl;
     cout << "Inserisci il nome del contatto da modificare: ";
     cin >> cercaNome;
     cout << "Inserisci il nuovo numero di telefono: ";
     cin >> nuovoTelefono;
 
     string cercaLower = toLowerString(cercaNome);
-    vector<Contatto> lista = caricaContattiDaFile();
+    vector<Contatto> lista = caricaContattiDaFile(nomeFile);
     bool trovato = false;
 
     for (auto& c : lista) {
@@ -192,7 +189,7 @@ void modificaContatto() {
     }
 
     if (trovato) {
-        salvaContattiSuFile(lista);
+        salvaContattiSuFile(lista, nomeFile);
         cout << "-> Contatto modificato con successo!" << endl;
     } else {
         cout << "-> Nessun contatto trovato con questo nome." << endl;
@@ -202,14 +199,14 @@ void modificaContatto() {
 // ==========================================
 // 5. ELIMINA CONTATTO
 // ==========================================
-void eliminaContatto() {
+void eliminaContatto(const string& nomeFile) {
     string cercaNome;
-    cout << "\n--- ELIMINA CONTATTO ---" << endl;
+    cout << "\n--- ELIMINA CONTATTO (" << nomeFile << ") ---" << endl;
     cout << "Inserisci il nome del contatto da eliminare: ";
     cin >> cercaNome;
 
     string cercaLower = toLowerString(cercaNome);
-    vector<Contatto> lista = caricaContattiDaFile();
+    vector<Contatto> lista = caricaContattiDaFile(nomeFile);
     vector<Contatto> nuovaLista;
     bool trovato = false;
 
@@ -222,7 +219,7 @@ void eliminaContatto() {
     }
 
     if (trovato) {
-        salvaContattiSuFile(nuovaLista);
+        salvaContattiSuFile(nuovaLista, nomeFile);
         cout << "-> Contatto eliminato con successo!" << endl;
     } else {
         cout << "-> Nessun contatto trovato con questo nome." << endl;
@@ -230,26 +227,28 @@ void eliminaContatto() {
 }
 
 // ==========================================
-// FUNZIONE PRINCIPALE (MENU PROTETTO)
+// FUNZIONE PRINCIPALE (MENU COMPLETO)
 // ==========================================
 int main() {
     int scelta;
+    string nomeFile = "rubrica.txt"; // File predefinito iniziale
 
     do {
         cout << "\n=========================" << endl;
-        cout << "   LA MIA RUBRICA C++    " << endl;
+        cout << " FILE ATTIVO: " << nomeFile << endl;
         cout << "=========================" << endl;
         cout << "1. Aggiungi numero" << endl;
         cout << "2. Cerca numero" << endl;
         cout << "3. Visualizza tutti (Ordinati)" << endl;
         cout << "4. Modifica contatto" << endl;
         cout << "5. Elimina contatto" << endl;
-        cout << "6. Esci" << endl;
+        cout << "6. Crea un nuovo file .txt (inserisci titolo)" << endl;
+        cout << "7. Seleziona un file esistente" << endl;
+        cout << "8. Esci" << endl;
         cout << "Scegli un'opzione: ";
         
-        // Protezione anti-crash se inserisci lettere nel menu
         if (!(cin >> scelta)) {
-            cout << "\n[ERRORE] Inserisci un numero valido da 1 a 6, non lettere!" << endl;
+            cout << "\n[ERRORE] Inserisci un numero valido da 1 a 8, non lettere!" << endl;
             cin.clear();
             cin.ignore(10000, '\n');
             scelta = 0;
@@ -258,28 +257,51 @@ int main() {
 
         switch (scelta) {
             case 1:
-                aggiungiContatto();
+                aggiungiContatto(nomeFile);
                 break;
             case 2:
-                cercaContatto();
+                cercaContatto(nomeFile);
                 break;
             case 3:
-                visualizzaTutti();
+                visualizzaTutti(nomeFile);
                 break;
             case 4:
-                modificaContatto();
+                modificaContatto(nomeFile);
                 break;
             case 5:
-                eliminaContatto();
+                eliminaContatto(nomeFile);
                 break;
-            case 6:
+            case 6: {
+                // Case 6: Crea un nuovo file .txt specificando il titolo
+                string titolo;
+                cout << "\n--- CREA NUOVO FILE .TXT ---" << endl;
+                cout << "Inserisci il titolo del nuovo file: ";
+                cin >> titolo;
+                nomeFile = titolo + ".txt";
+                // Crea un file vuoto iniziale o lo inizializza
+                ofstream nuovoFile(nomeFile);
+                nuovoFile.close();
+                cout << "-> Creato e attivato con successo il file: " << nomeFile << endl;
+                break;
+            }
+            case 7: {
+                // Case 7: Apri/Seleziona un file esistente
+                string titoloEsistente;
+                cout << "\n--- SELEZIONA FILE ESISTENTE ---" << endl;
+                cout << "Inserisci il nome del file .txt da aprire: ";
+                cin >> titoloEsistente;
+                nomeFile = titoloEsistente + ".txt";
+                cout << "-> Ora stai usando il file: " << nomeFile << endl;
+                break;
+            }
+            case 8:
                 cout << "Uscita dal programma. A presto!" << endl;
                 break;
             default:
-                cout << "Scelta non valida! Inserisci un numero tra 1 e 6." << endl;
+                cout << "Scelta non valida! Inserisci un numero tra 1 e 8." << endl;
         }
         
-    } while (scelta != 6);
+    } while (scelta != 8);
 
     return 0;
 }
